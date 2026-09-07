@@ -14,16 +14,12 @@ spec:
       labels:
         app: frontend-web
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 101
       containers:
         - name: frontend-web
           image: ghcr.io/nexora-platform/frontend-web:v1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
-          # NGINX HEALTH PROBES (Check static root on port 80)
           readinessProbe:
             httpGet:
               path: /
