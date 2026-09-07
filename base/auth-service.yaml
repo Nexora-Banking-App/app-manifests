@@ -30,20 +30,11 @@ spec:
           envFrom:
             # Injected live from AWS Secrets Manager via ESO!
             - secretRef:
-                name: db-secret
+                name: nexora-secrets
           env:
             - name: TRANSACTION_SVC_URL
               value: "http://transaction-service:8000"
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: platform-secrets
-                  key: JWT_SECRET
-            - name: INTERNAL_SERVICE_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: platform-secrets
-                  key: INTERNAL_SERVICE_SECRET
+
           readinessProbe:
             httpGet:
               path: /health/readiness

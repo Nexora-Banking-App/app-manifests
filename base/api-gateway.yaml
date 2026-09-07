@@ -38,12 +38,12 @@ spec:
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: platform-secrets
+                  name: nexora-secrets
                   key: JWT_SECRET
             - name: INTERNAL_SERVICE_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: platform-secrets
+                  name: nexora-secrets
                   key: INTERNAL_SERVICE_SECRET
           readinessProbe:
             httpGet:

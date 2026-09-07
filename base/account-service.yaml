@@ -29,7 +29,7 @@ spec:
             - containerPort: 8000
           envFrom:
             - secretRef:
-                name: db-secret
+                name: nexora-secrets
           readinessProbe:
             httpGet:
               path: /health/readiness
