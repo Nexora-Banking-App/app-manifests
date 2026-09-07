@@ -7,8 +7,8 @@ resources:
   - ../../base
   - external-secret.yaml
   - gateway.yaml
+  - db-init-job.yaml 
 
-# Points Kustomize to your live Amazon ECR images:
 images:
   - name: ghcr.io/nexora-platform/frontend-web
     newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/frontend-web
