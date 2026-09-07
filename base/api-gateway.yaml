@@ -14,7 +14,6 @@ spec:
       labels:
         app: api-gateway
       annotations:
-        # AUTOMATED PROMETHEUS SCRAPING:
         prometheus.io/scrape: "true"
         prometheus.io/path: "/metrics"
         prometheus.io/port: "8000"
@@ -25,7 +24,8 @@ spec:
       containers:
         - name: api-gateway
           image: ghcr.io/nexora-platform/api-gateway:v1.0.0
-          imagePullPolicy: IfNotPresent
+          # CRITICAL FIX: Force Kubernetes to pull the new build from ECR!
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:
