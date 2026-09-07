@@ -16,13 +16,26 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101 # nginx unprivileged user
+        runAsUser: 101
       containers:
         - name: frontend-web
           image: ghcr.io/nexora-platform/frontend-web:v1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
+          # NGINX HEALTH PROBES (Check static root on port 80)
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
           resources:
             requests:
               cpu: 50m
