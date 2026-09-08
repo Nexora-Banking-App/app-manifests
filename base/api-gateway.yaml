@@ -51,12 +51,12 @@ spec:
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: nexora-secrets
+                  name: db-secret
                   key: JWT_SECRET
             - name: INTERNAL_SERVICE_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: nexora-secrets
+                  name: db-secret
                   key: INTERNAL_SERVICE_SECRET
           readinessProbe:
             httpGet:

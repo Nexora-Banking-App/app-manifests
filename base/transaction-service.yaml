@@ -29,7 +29,7 @@ spec:
             - containerPort: 8000
           envFrom:
             - secretRef:
-                name: nexora-secrets
+                name: db-secret
           env:
             - name: FRAUD_SVC_URL
               value: "http://fraud-service:8000"

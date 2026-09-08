@@ -30,7 +30,7 @@ spec:
           envFrom:
             # Injected live from AWS Secrets Manager via ESO!
             - secretRef:
-                name: nexora-secrets
+                name: db-secret
           env:
             - name: TRANSACTION_SVC_URL
               value: "http://transaction-service:8000"
