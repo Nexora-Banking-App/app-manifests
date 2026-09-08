@@ -1,14 +1,26 @@
-apiVersion: apps/v1
-kind: Deployment
+# Changed from apps/v1 Deployment to argoproj.io/v1alpha1 Rollout!
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: api-gateway
   labels:
     app: api-gateway
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: api-gateway
+  # THE CANARY STRATEGY:
+  strategy:
+    canary:
+      steps:
+        - setWeight: 10   # Send 10% of traffic to the new version
+        - pause: 
+            duration: 30s # Pause for 30 seconds to allow Prometheus to gather metrics
+        - setWeight: 50   # Ramp up to 50%
+        - pause: 
+            duration: 30s
+        # If no errors occur, it automatically proceeds to 100%
   template:
     metadata:
       labels:
@@ -21,6 +33,7 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+      # ... (KEEP THE REST OF YOUR CONTAINERS SPEC EXACTLY THE SAME!) ...
       containers:
         - name: api-gateway
           image: ghcr.io/nexora-platform/api-gateway:v1.0.0
