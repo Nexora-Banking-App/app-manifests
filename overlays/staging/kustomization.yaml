@@ -12,19 +12,19 @@ resources:
 images:
 - name: ghcr.io/nexora-platform/account-service
   newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/account-service
-  newTag: 4970b78
+  newTag: a71f55e
 - name: ghcr.io/nexora-platform/api-gateway
   newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/api-gateway
-  newTag: 4970b78
+  newTag: a71f55e
 - name: ghcr.io/nexora-platform/auth-service
   newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/auth-service
-  newTag: 4970b78
+  newTag: a71f55e
 - name: ghcr.io/nexora-platform/fraud-service
   newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/fraud-service
-  newTag: 4970b78
+  newTag: a71f55e
 - name: ghcr.io/nexora-platform/frontend-web
   newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/frontend-web
-  newTag: 4970b78
+  newTag: a71f55e
 - name: ghcr.io/nexora-platform/transaction-service
   newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/transaction-service
-  newTag: 4970b78
+  newTag: a71f55e
