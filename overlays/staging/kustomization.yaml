@@ -4,6 +4,7 @@ kind: Kustomization
 namespace: nexora
 
 resources:
+  - namespace.yaml
   - ../../base
   - external-secret.yaml
   - gateway.yaml
