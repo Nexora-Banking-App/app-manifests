@@ -5,6 +5,10 @@ metadata:
   namespace: nexora
 spec:
   template:
+    metadata:
+      annotations:
+        # CRITICAL FIX: Disable Istio sidecar so the job connects directly to MySQL!
+        sidecar.istio.io/inject: "false"
     spec:
       restartPolicy: OnFailure
       containers:
@@ -17,6 +21,7 @@ spec:
             - /bin/sh
             - -c
             - |
+              set -e
               echo "Connecting to AWS RDS at $DB_HOST..."
               mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" <<'EOF'
               CREATE TABLE IF NOT EXISTS users (
