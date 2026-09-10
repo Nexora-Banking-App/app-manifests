@@ -5,7 +5,7 @@ metadata:
   labels:
     app: fraud-service
 spec:
-  replicas: 1
+  # (Removed replicas: 1 so HPA owns the scale!)
   selector:
     matchLabels:
       app: fraud-service
@@ -44,7 +44,6 @@ spec:
               cpu: 100m
               memory: 64Mi
             limits:
-              # High CPU ceiling to allow autoscaling load tests to spike!
               cpu: 500m
               memory: 128Mi
 ---
