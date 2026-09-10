@@ -3,11 +3,14 @@ kind: Job
 metadata:
   name: nexora-db-init-job
   namespace: nexora
+  annotations:
+    # AUTOMATED: Deletes the old job first so it never hits the immutable error!
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded,BeforeHookCreation
 spec:
   template:
     metadata:
       annotations:
-        # CRITICAL FIX: Disable Istio sidecar so the job connects directly to MySQL!
         sidecar.istio.io/inject: "false"
     spec:
       restartPolicy: OnFailure
@@ -67,11 +70,4 @@ spec:
               -- SEED: Nexora Central Bank Treasury Reserve (User ID 1)
               INSERT INTO users (id, username, email, phone, password_hash)
               VALUES (1, 'nexora_treasury', 'treasury@nexora.bank', '000-000-0000', '$2b$12$e/samplehashedpasswordfortreasurynotforlogin')
-              ON DUPLICATE KEY UPDATE id=id;
-
-              INSERT INTO accounts (user_id, balance)
-              VALUES (1, 10000000.00)
-              ON DUPLICATE KEY UPDATE user_id=user_id;
-              EOF
-
-              echo "AWS RDS Database Schema Initialized Successfully!"
+              ON DUPLICATE KEY UPDATE id=
