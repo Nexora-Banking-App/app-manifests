@@ -4,7 +4,6 @@ metadata:
   name: nexora-db-init-job
   namespace: nexora
   annotations:
-    # AUTOMATED: Deletes the old job first so it never hits the immutable error!
     argocd.argoproj.io/hook: Sync
     argocd.argoproj.io/hook-delete-policy: HookSucceeded,BeforeHookCreation
 spec:
@@ -26,7 +25,7 @@ spec:
             - |
               set -e
               echo "Connecting to AWS RDS at $DB_HOST..."
-              mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" <<'EOF'
+              mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "
               CREATE TABLE IF NOT EXISTS users (
                   id INT AUTO_INCREMENT PRIMARY KEY,
                   username VARCHAR(50) UNIQUE NOT NULL,
@@ -67,7 +66,12 @@ spec:
                   FOREIGN KEY (receiver_id) REFERENCES users(id)
               );
 
-              -- SEED: Nexora Central Bank Treasury Reserve (User ID 1)
               INSERT INTO users (id, username, email, phone, password_hash)
-              VALUES (1, 'nexora_treasury', 'treasury@nexora.bank', '000-000-0000', '$2b$12$e/samplehashedpasswordfortreasurynotforlogin')
-              ON DUPLICATE KEY UPDATE id=
+              VALUES (1, 'nexora_treasury', 'treasury@nexora.bank', '000-000-0000', '\$2b\$12\$e/samplehashedpasswordfortreasurynotforlogin')
+              ON DUPLICATE KEY UPDATE id=id;
+
+              INSERT INTO accounts (user_id, balance)
+              VALUES (1, 10000000.00)
+              ON DUPLICATE KEY UPDATE user_id=user_id;
+              "
+              echo "AWS RDS Database Schema Initialized Successfully!"
