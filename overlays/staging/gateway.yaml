@@ -3,8 +3,11 @@ kind: Gateway
 metadata:
   name: nexora-gateway
   namespace: nexora
+  annotations:
+    # CRITICAL FIX: Tells AWS to assign public IPs and deploy to public subnets!
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 spec:
-  gatewayClassName: istio # Powered natively by Istio / Cilium
+  gatewayClassName: istio
   listeners:
     - name: http
       protocol: HTTP
@@ -22,7 +25,6 @@ spec:
   parentRefs:
     - name: nexora-gateway
   rules:
-    # 1. API Route: All /api/* traffic goes to the API Gateway
     - matches:
         - path:
             type: PathPrefix
@@ -31,7 +33,6 @@ spec:
         - name: api-gateway
           port: 8000
 
-    # 2. Frontend Route: Default root goes to the SPA Web Portal
     - matches:
         - path:
             type: PathPrefix
