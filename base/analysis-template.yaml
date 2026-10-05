@@ -9,14 +9,19 @@ spec:
   metrics:
     - name: error-rate
       interval: 10s
-      # FIX: Check if the result array has data before evaluating the first index.
-      # If there is no traffic (len == 0), the condition short-circuits and passes.
+      # Fallback: safely passes if the array is ever unexpectedly empty
       successCondition: len(result) == 0 || result[0] <= 0.05 
       failureLimit: 1
       provider:
         prometheus:
           address: http://prometheus-server.monitoring.svc.cluster.local:80
           query: |
-            sum(rate(http_requests_total{app="{{args.service-name}}", status=~"5.*"}[1m])) 
-            / 
-            sum(rate(http_requests_total{app="{{args.service-name}}"}[1m]))
+            (
+              sum(rate(http_requests_total{app="{{args.service-name}}", status=~"5.*"}[1m])) 
+              or on() vector(0)
+            )
+            /
+            (
+              sum(rate(http_requests_total{app="{{args.service-name}}"}[1m])) > 0 
+              or on() vector(1)
+            )
