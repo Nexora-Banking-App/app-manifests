@@ -8,3 +8,4 @@ resources:
   - account-service.yaml
   - transaction-service.yaml
   - fraud-service.yaml
+  - analysis-template.yaml

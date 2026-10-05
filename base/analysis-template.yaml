@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: http-error-rate
+  namespace: nexora
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: error-rate
+      interval: 10s
+      successCondition: result[0] <= 0.05 # Abort if error rate is greater than 5%!
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: http://prometheus-server.monitoring.svc.cluster.local:80
+          query: |
+            sum(rate(http_requests_total{app="{{args.service-name}}", status=~"5.*"}[1m])) 
+            / 
+            sum(rate(http_requests_total{app="{{args.service-name}}"}[1m]))

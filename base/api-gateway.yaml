@@ -13,14 +13,18 @@ spec:
   # THE CANARY STRATEGY:
   strategy:
     canary:
+      analysis:
+        templates:
+          - templateName: http-error-rate
+        args:
+          - name: service-name
+            value: api-gateway
+        startingStep: 1 # Start analyzing after 10% traffic shifts!
       steps:
-        - setWeight: 10   # Send 10% of traffic to the new version
-        - pause: 
-            duration: 30s # Pause for 30 seconds to allow Prometheus to gather metrics
-        - setWeight: 50   # Ramp up to 50%
-        - pause: 
-            duration: 30s
-        # If no errors occur, it automatically proceeds to 100%
+        - setWeight: 10
+        - pause: {duration: 30s}
+        - setWeight: 50
+        - pause: {duration: 30s}
   template:
     metadata:
       labels:
