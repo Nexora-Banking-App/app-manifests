@@ -39,4 +39,4 @@ spec:
             value: /
       backendRefs:
         - name: frontend-web
-          port: 80
+          port: 8080
