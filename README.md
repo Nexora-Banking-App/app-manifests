@@ -28,14 +28,15 @@ This repository is the **Deployment Target** for the Nexora Enterprise Platform.
 ## Table of Contents
 
 1. [Architectural Philosophy](#architectural-philosophy)
-2. [Directory Structure](#directory-structure)
-3. [The Kustomize Inheritance Model](#the-kustomize-inheritance-model)
-4. [Environment Overlay Specifications](#environment-overlay-specifications)
-5. [Ingress & Gateway API Architecture](#ingress--gateway-api-architecture)
-6. [Progressive Delivery (Argo Rollouts)](#progressive-delivery-argo-rollouts)
-7. [The GitOps Promotion Flow](#the-gitops-promotion-flow)
-8. [Real-World Troubleshooting & Solutions](#real-world-troubleshooting--solutions)
-9. [Known Gaps & Open Items](#known-gaps--open-items)
+2. [Current Staging Deployment](#current-staging-deployment)
+3. [Directory Structure](#directory-structure)
+4. [The Kustomize Inheritance Model](#the-kustomize-inheritance-model)
+5. [Environment Overlay Specifications](#environment-overlay-specifications)
+6. [Ingress & Gateway API Architecture](#ingress--gateway-api-architecture)
+7. [Progressive Delivery (Argo Rollouts)](#progressive-delivery-argo-rollouts)
+8. [The GitOps Promotion Flow](#the-gitops-promotion-flow)
+9. [Real-World Troubleshooting & Solutions](#real-world-troubleshooting--solutions)
+10. [Known Gaps & Open Items](#known-gaps--open-items)
 
 ---
 
@@ -46,6 +47,21 @@ In this platform, **application source code is strictly separated from deploymen
 Developers commit Python code in `nexora-apps`. This repository (`app-manifests`) contains zero application logic—it contains only the declarative specifications of how those containers run in Kubernetes. 
 
 By utilizing Kustomize overlays, we maintain a single, unpolluted `base/` configuration while allowing environment-specific modifications (like staging resource quotas, production high availability scaling, and AWS ECR digest pinning) to be layered on top without template duplication.
+
+### Current Staging Deployment
+
+Verified **2026-10-06** against `nexora-staging`. Argo CD's `nexora-workloads`
+application tracks `platform-manifests/nexora-workloads`, which builds
+`overlays/staging/` from this repository's `main` branch.
+
+* All six services use ECR image tag `8e48351` at verification; the API gateway is an Argo Rollout with two ready replicas.
+* `account-service`, `auth-service`, and `transaction-service` each have two ready replicas. `fraud-service` and `frontend-web` each have one; the fraud HPA can scale from one to five.
+* `auth-service`, `transaction-service`, and `fraud-service` use Kafka with TLS/SCRAM credentials and CA material supplied by External Secrets.
+* Traffic enters through the Gateway API HTTPRoute; the frontend and `/api` routes share the gateway.
+* All application Argo resources were Synced/Healthy at verification.
+
+The production overlay is configuration in Git; the health status above does not
+assert that a production cluster is currently deployed.
 
 ---
 
@@ -67,7 +83,9 @@ app-manifests/
     │   ├── kustomization.yaml          <-- Injects Amazon ECR image digests & patches
     │   ├── external-secret.yaml        <-- Binds to nexora/staging/db-credentials via ESO
     │   ├── gateway.yaml                <-- Kubernetes Gateway API (Gateway & HTTPRoute)
-    │   └── db-init-job.yaml            <-- Automated MySQL DDL & Staging Treasury Seeding
+    │   ├── db-init-job.yaml            <-- Automated MySQL DDL & staging Treasury seeding
+    │   ├── kafka-access.yaml           <-- Cross-namespace Kafka ExternalSecrets
+    │   └── patch-kafka-*.yaml          <-- TLS/SCRAM Kafka configuration for services
     │
     └── prod/                           <-- Production Environment Target (nexora-prod cluster)
         ├── kustomization.yaml          <-- Enforces replicas: 2 across AZs & production quotas
@@ -101,10 +119,11 @@ The repository uses Kustomize's declarative patching engine:
 | Feature | Staging Overlay (`overlays/staging/`) | Production Overlay (`overlays/prod/`) |
 | :--- | :--- | :--- |
 | **Target Cluster** | `nexora-staging` EKS cluster | `nexora-prod` EKS cluster |
-| **Replica Strategy** | `replicas: 1` (Conserves staging compute) | **`replicas: 2`** (Patched via Kustomize RFC 6902) |
-| **High Availability** | Single node placement acceptable | **Multi-AZ Spread:** Pods distributed across AZs |
+| **Replica Strategy** | Gateway rollout: 2; account/auth/transaction: 2 each; frontend/fraud: 1 each (fraud HPA: 1–5) | Defined by `overlays/prod/`; validate the rendered overlay before promotion |
+| **High Availability** | Two EKS workers across `us-east-1b` and `us-east-1c`; Kubernetes schedules replicas | Production-specific; verify the live production cluster before relying on HA |
 | **Secrets Manager Path** | `nexora/staging/db-credentials` | **`nexora/prod/db-credentials`** |
-| **Database Target** | Single-AZ RDS MySQL (`db.t3.micro`) | **Multi-AZ Synchronous RDS MySQL (`db.t3.medium`, RPO=0)** |
+| **Database Target** | Single-AZ RDS MySQL (`db.t3.micro`) | Defined by production infrastructure configuration |
+| **Kafka** | Internal TLS/SCRAM; three-broker Strimzi Kafka cluster | Verify production Kafka configuration before promotion |
 | **Autoscaling Target** | HPA: `fraud-service` (1-5 pods) | HPA: `fraud-service` (1-5 pods) |
 
 ---
@@ -200,7 +219,7 @@ This repository is mutated automatically by our CI supply chain pipeline:
 ### 4. Pod Limit Exceeded on t3.micro Nodes
 * **Symptom:** Pods were stuck in `Pending` with `0/2 nodes are available: 2 Too many pods`.
 * **Diagnosis:** On AWS EKS, `t3.micro` instances have an architectural limit of 4 pods per node due to ENI IP constraints. Running 2 replicas of every service exhausted the 8 available slots.
-* **Fix:** Sized staging base workloads conservatively, and subsequently resized the underlying node group to `c7i-flex.large` (58 pod slots) to allow unconstrained execution.
+* **Fix:** Staging now uses two `m7i-flex.large` workers. CPU requests still constrain scheduling independently of actual CPU use; account for rollout surges when sizing workers.
 
 ---
 
