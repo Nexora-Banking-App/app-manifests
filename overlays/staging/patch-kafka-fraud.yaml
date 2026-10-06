@@ -1,0 +1,43 @@
+# Staging-only: connects fraud-service to Kafka. Prod is untouched until prod has its own Kafka.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fraud-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: fraud-service
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "nexora-kafka-kafka-bootstrap.kafka.svc.cluster.local:9093"
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: "SASL_SSL"
+            - name: KAFKA_SASL_MECHANISM
+              value: "SCRAM-SHA-512"
+            - name: KAFKA_USERNAME
+              value: "fraud-service"
+            - name: KAFKA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-fraud-service
+                  key: KAFKA_PASSWORD
+            - name: KAFKA_CA_FILE
+              value: "/etc/kafka/ca/ca.crt"
+            - name: KAFKA_CONSUMER_GROUP
+              value: "fraud-service"
+          volumeMounts:
+            - name: kafka-ca
+              mountPath: /etc/kafka/ca
+              readOnly: true
+          # Kafka client libraries need more headroom than the 128Mi base limit
+          resources:
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: kafka-ca
+          secret:
+            secretName: kafka-fraud-service
+            items:
+              - key: ca.crt
+                path: ca.crt

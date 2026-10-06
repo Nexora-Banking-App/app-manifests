@@ -1,0 +1,97 @@
+# How the nexora namespace gets Kafka credentials without copying secrets by hand.
+# External Secrets Operator reads two kinds of values from the kafka namespace
+# (the cluster CA certificate and each service's password) and creates a local
+# Secret per service. Access is limited by the Role in platform-config
+# (platform-manifests/kafka/eso-reader-rbac.yaml).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eso-kafka-reader
+  namespace: nexora
+---
+apiVersion: external-secrets.io/v1beta1
+kind: SecretStore
+metadata:
+  name: kafka-secrets
+  namespace: nexora
+spec:
+  provider:
+    kubernetes:
+      remoteNamespace: kafka
+      server:
+        caProvider:
+          type: ConfigMap
+          name: kube-root-ca.crt
+          key: ca.crt
+      auth:
+        serviceAccount:
+          name: eso-kafka-reader
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: kafka-transaction-service
+  namespace: nexora
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: kafka-secrets
+    kind: SecretStore
+  target:
+    name: kafka-transaction-service
+    creationPolicy: Owner
+  data:
+    - secretKey: KAFKA_PASSWORD
+      remoteRef:
+        key: transaction-service
+        property: password
+    - secretKey: ca.crt
+      remoteRef:
+        key: nexora-kafka-cluster-ca-cert
+        property: ca.crt
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: kafka-auth-service
+  namespace: nexora
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: kafka-secrets
+    kind: SecretStore
+  target:
+    name: kafka-auth-service
+    creationPolicy: Owner
+  data:
+    - secretKey: KAFKA_PASSWORD
+      remoteRef:
+        key: auth-service
+        property: password
+    - secretKey: ca.crt
+      remoteRef:
+        key: nexora-kafka-cluster-ca-cert
+        property: ca.crt
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: kafka-fraud-service
+  namespace: nexora
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: kafka-secrets
+    kind: SecretStore
+  target:
+    name: kafka-fraud-service
+    creationPolicy: Owner
+  data:
+    - secretKey: KAFKA_PASSWORD
+      remoteRef:
+        key: fraud-service
+        property: password
+    - secretKey: ca.crt
+      remoteRef:
+        key: nexora-kafka-cluster-ca-cert
+        property: ca.crt

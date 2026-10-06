@@ -8,6 +8,12 @@ resources:
 - external-secret.yaml
 - gateway.yaml
 - db-init-job.yaml
+- kafka-access.yaml
+
+patches:
+- path: patch-kafka-transaction.yaml
+- path: patch-kafka-auth.yaml
+- path: patch-kafka-fraud.yaml
 
 images:
 - name: ghcr.io/nexora-platform/account-service
