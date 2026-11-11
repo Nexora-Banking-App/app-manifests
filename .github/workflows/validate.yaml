@@ -1,0 +1,45 @@
+name: "Validate manifests"
+
+# Runs on every pull request, including the image-promotion PRs opened by the
+# nexora-apps pipeline. ArgoCD deploys main automatically, so an overlay that
+# does not render must be caught here.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  KUSTOMIZE_VERSION: "5.4.3"
+
+jobs:
+  kustomize-build:
+    name: "kustomize build (staging, prod)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kustomize
+        run: |
+          curl -fsSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" | tar xz
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Build overlays
+        run: |
+          for overlay in staging prod; do
+            kustomize build "overlays/$overlay" > "rendered-$overlay.yaml"
+            echo "ok    overlays/$overlay ($(grep -c '^kind:' rendered-$overlay.yaml) objects)"
+          done
+
+      - name: No overlay deploys a floating image tag
+        run: |
+          if grep -nE 'image: .*:(latest|main|master)$' rendered-staging.yaml rendered-prod.yaml; then
+            echo "::error::floating image tag found; pin to an immutable tag"
+            exit 1
+          fi
+          echo "all images are pinned"
