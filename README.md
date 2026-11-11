@@ -76,7 +76,10 @@ app-manifests/
 │   ├── auth-service.yaml               <-- Identity & Bcrypt Service (Deployment & Service)
 │   ├── account-service.yaml            <-- Read-Only CQRS Ledger (Deployment & Service)
 │   ├── transaction-service.yaml        <-- ACID Financial Mutation Engine (Deployment & Service)
-│   └── fraud-service.yaml              <-- CPU Risk Engine & HorizontalPodAutoscaler (HPA)
+│   ├── fraud-service.yaml              <-- Fraud rule engine & HorizontalPodAutoscaler (HPA)
+│   ├── analysis-template.yaml          <-- Canary error-rate analysis (Prometheus)
+│   ├── otel-env.yaml                   <-- Shared tracing settings (ConfigMap)
+│   └── pod-disruption-budgets.yaml     <-- One PDB per service
 │
 └── overlays/
     ├── staging/                        <-- Staging Environment Target (nexora-staging cluster)
@@ -141,7 +144,7 @@ This repository adopts the modern **Kubernetes Gateway API (`gateway.networking.
          ┌─────────────────────────┴─────────────────────────┐
          │ Matches PathPrefix: /                             │ Matches PathPrefix: /api/*
          ▼                                                   ▼
-[ Service: frontend-web:80 ]                         [ Service: api-gateway:8000 ]
+[ Service: frontend-web:8080 ]                       [ Service: api-gateway:8000 ]
 ```
 
 ### 1. `Gateway` Resource
@@ -151,7 +154,7 @@ Declared in `overlays/{env}/gateway.yaml` with `gatewayClassName: istio`.
 ### 2. `HTTPRoute` Resource
 Defines layer-7 path routing rules on a single domain and port:
 * **`/api/*`** routes to `api-gateway` on port 8000.
-* **`/`** routes to `frontend-web` on port 80.
+* **`/`** routes to `frontend-web` on port 8080 (the port NGINX listens on).
 * **Zero CORS:** Because the SPA frontend and the backend API are served from the identical Load Balancer hostname on port 80, the browser does not enforce cross-origin restrictions, allowing the frontend to call `/api` using relative paths.
 
 ---
@@ -165,16 +168,18 @@ spec:
   strategy:
     canary:
       steps:
-        - setWeight: 10   # Route 10% of traffic to the new version
-        - pause: 
-            duration: 30s # 30-second observation window
-        - setWeight: 50   # Ramp up to 50%
-        - pause: 
-            duration: 30s
-        # Automatically promotes to 100% if no errors occur
+        - setWeight: 10   # First canary step
+        - pause:
+            duration: 2m  # Long enough for several 30s Prometheus scrapes
+        - setWeight: 50
+        - pause:
+            duration: 2m
+        # Promotes to 100% if the error-rate analysis passes
 ```
 
-When an image digest update is merged, Argo Rollouts creates a new Canary ReplicaSet, splits live traffic 10/90, and pauses before full promotion, preventing bad builds from causing 100% user-facing outages.
+When an image tag update is merged, Argo Rollouts creates a canary ReplicaSet and pauses between steps. In the background, the `http-error-rate` AnalysisTemplate queries Prometheus six times, 30 seconds apart, over a `[2m]` window; the rollout aborts if the 5xx ratio goes above 5%.
+
+**Weights are approximate.** No `trafficRouting` is configured, so Argo Rollouts approximates the weights with pod counts. With two replicas, `setWeight: 10` runs one canary pod next to two stable pods, which is about 33% of traffic, not 10%. Exact weights would need Istio traffic routing (a VirtualService and DestinationRule, or the Gateway API plugin), separate canary and stable Services, and an analysis query filtered by `rollouts-pod-template-hash` so it measures the canary pods alone.
 
 ![alt text](screenshots/canary-1.png)
 ![alt text](screenshots/canary-2.png)
@@ -192,7 +197,8 @@ This repository is mutated automatically by our CI supply chain pipeline:
 5. The PR updates overlays/staging/kustomization.yaml to point to the new <GIT_SHA>.
 6. An engineer reviews and merges the PR.
 7. ArgoCD detects the merge and initiates the progressive canary rollout on the cluster.
-8. Promotion to Production: A secondary PR promotes the verified <GIT_SHA> from staging into overlays/prod/.
+8. Promotion to Production: a pull request copies the verified <GIT_SHA> from staging into every newTag in
+   overlays/prod/kustomization.yaml. Prod never uses the "latest" tag; CI rejects floating tags.
 ```
 
 ![alt text](screenshots/pr.png)
@@ -225,4 +231,7 @@ This repository is mutated automatically by our CI supply chain pipeline:
 
 ## Known Gaps & Open Items
 
+* **Canary weights:** approximated by pod count, and the analysis measures the whole service rather than the canary pods (see Progressive Delivery).
+* **Frontend hardening:** the Python services run with a read-only root filesystem and no capabilities. `frontend-web` (stock `nginx:alpine`) only has privilege escalation disabled, because the image starts as root.
+* **Production overlay:** renders cleanly and is pinned to the tag staging runs, but has not been deployed. It has no Kafka configuration yet.
 * **Gateway API TLS Termination:** The `Gateway` resource currently listens on raw HTTP (port 80). In a full production banking deployment, an AWS Certificate Manager (ACM) SSL certificate should be bound to the Gateway on port 443 with an HTTP-to-HTTPS redirect rule.
