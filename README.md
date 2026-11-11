@@ -21,6 +21,21 @@ This repository is the **Deployment Target** for the Nexora Enterprise Platform.
 
 ---
 
+## At a Glance
+
+**What this repository is:** the Kubernetes description of the six banking services, and the single place that says which image version runs in which environment.
+
+| Path | Contents |
+|---|---|
+| `base/` | One manifest per service (Deployment or Rollout, Service), the fraud HPA, the canary analysis, PodDisruptionBudgets, shared tracing settings, and the database init job |
+| `overlays/staging/` | Staging image tags, secrets path, Gateway and routes, Kafka credentials and settings |
+| `overlays/prod/` | Prod image tags (promoted by pull request), secrets path, Gateway and routes |
+| `.github/` | PR validation: both overlays render and no floating image tag is used |
+
+**Who changes it:** the `nexora-apps` pipeline opens a pull request here after every release build; a human merges it; ArgoCD deploys it.
+
+---
+
 ## Table of Contents
 
 1. [Architectural Philosophy](#architectural-philosophy)
@@ -42,7 +57,7 @@ In this platform, **application source code is strictly separated from deploymen
 
 Developers commit Python code in `nexora-apps`. This repository (`app-manifests`) contains zero application logic—it contains only the declarative specifications of how those containers run in Kubernetes. 
 
-By utilizing Kustomize overlays, we maintain a single, unpolluted `base/` configuration while allowing environment-specific modifications (like staging resource quotas, production high availability scaling, and AWS ECR digest pinning) to be layered on top without template duplication.
+By utilizing Kustomize overlays, we maintain a single, unpolluted `base/` configuration while allowing environment-specific modifications (like staging resource quotas, production high availability scaling, and ECR image tag pinning) to be layered on top without template duplication.
 
 ### Current Staging Deployment
 
@@ -80,7 +95,7 @@ app-manifests/
 │
 └── overlays/
     ├── staging/                        <-- Staging Environment Target (nexora-staging cluster)
-    │   ├── kustomization.yaml          <-- Injects Amazon ECR image digests & patches
+    │   ├── kustomization.yaml          <-- Sets the ECR image tags and Kafka patches
     │   ├── external-secret.yaml        <-- Binds to nexora/staging/db-credentials via ESO
     │   ├── gateway.yaml                <-- Kubernetes Gateway API (Gateway & HTTPRoute)
     │   ├── kafka-access.yaml           <-- Cross-namespace Kafka ExternalSecrets
@@ -105,7 +120,7 @@ The repository uses Kustomize's declarative patching engine:
          ▼                   ▼
 [ overlays/staging/ ]     [ overlays/prod/ ]
   • Cost-optimized sizing   • High Availability (replicas: 2)
-  • Staging ECR digests     • Production ECR digests
+  • Staging image tags      • Production image tags
   • Staging RDS secrets     • Multi-AZ RDS secrets (RPO=0)
   • Staging Gateway API     • Production Gateway API
 ```
@@ -123,6 +138,20 @@ The repository uses Kustomize's declarative patching engine:
 | **Database Target** | Single-AZ RDS MySQL (`db.t3.micro`) | Defined by production infrastructure configuration |
 | **Kafka** | Internal TLS/SCRAM; three-broker Strimzi Kafka cluster | Verify production Kafka configuration before promotion |
 | **Autoscaling Target** | HPA: `fraud-service` (1-5 pods) | HPA: `fraud-service` (1-5 pods) |
+
+### Workload Baseline (applies to both environments)
+
+| Concern | Setting in `base/` |
+|---|---|
+| Identity | Python services run as non-root (UID 1000) |
+| Filesystem | Read-only root filesystem with a writable `/tmp` volume |
+| Privileges | All Linux capabilities dropped, no privilege escalation, `RuntimeDefault` seccomp |
+| Availability | Two replicas for the stateless APIs, spread across nodes, one PodDisruptionBudget per service |
+| Resources | CPU and memory requests and limits on every container (256Mi memory limit for the Python services) |
+| Health | Liveness and readiness probes on every service |
+| Metrics | Port named `http`, scrape annotations (staging) and the `nexora.io/metrics` label (prod ServiceMonitor) |
+| Tracing | `otel-env` ConfigMap points every service at the OpenTelemetry Collector |
+| Schema | `db-init-job` runs on every sync; every statement is idempotent |
 
 ---
 
