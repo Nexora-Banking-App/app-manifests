@@ -9,3 +9,5 @@ resources:
   - transaction-service.yaml
   - fraud-service.yaml
   - analysis-template.yaml
+  - otel-env.yaml
+  - pod-disruption-budgets.yaml

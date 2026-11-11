@@ -21,17 +21,44 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      # Prefer one replica per node so a node failure does not take out the service
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: auth-service
+      volumes:
+        # Writable scratch space; the root filesystem is read-only
+        - name: tmp
+          emptyDir: {}
       containers:
         - name: auth-service
           image: ghcr.io/nexora-platform/auth-service:v1.0.0
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8000
+            - name: http
+              containerPort: 8000
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           envFrom:
+            - configMapRef:
+                name: otel-env
             # Injected live from AWS Secrets Manager via ESO!
             - secretRef:
                 name: db-secret
           env:
+            - name: OTEL_SERVICE_NAME
+              value: auth-service
             - name: TRANSACTION_SVC_URL
               value: "http://transaction-service:8000"
 
@@ -59,9 +86,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: auth-service
+  labels:
+    app: auth-service
+    # Selected by the prod ServiceMonitor (kube-prometheus-stack)
+    nexora.io/metrics: enabled
 spec:
   selector:
     app: auth-service
   ports:
-    - port: 8000
+    - name: http
+      port: 8000
       targetPort: 8000

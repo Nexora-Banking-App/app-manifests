@@ -1,0 +1,61 @@
+# One PodDisruptionBudget per service: a node drain or cluster upgrade may take
+# down at most one pod of a service at a time.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-web
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: frontend-web
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-service
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: auth-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: account-service
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: account-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: transaction-service
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: transaction-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fraud-service
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: fraud-service

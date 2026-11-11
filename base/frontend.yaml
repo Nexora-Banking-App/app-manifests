@@ -14,12 +14,27 @@ spec:
       labels:
         app: frontend-web
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: frontend-web
       containers:
         - name: frontend-web
           image: ghcr.io/nexora-platform/frontend-web:v1.0.0
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8080
+            - name: http
+              containerPort: 8080
+          # nginx:alpine starts as root and drops to the nginx user itself, so the
+          # root filesystem and capabilities are left as the image expects.
+          securityContext:
+            allowPrivilegeEscalation: false
           readinessProbe:
             httpGet:
               path: /

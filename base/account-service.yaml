@@ -21,13 +21,41 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      # Prefer one replica per node so a node failure does not take out the service
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: account-service
+      volumes:
+        # Writable scratch space; the root filesystem is read-only
+        - name: tmp
+          emptyDir: {}
       containers:
         - name: account-service
           image: ghcr.io/nexora-platform/account-service:v1.0.0
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8000
+            - name: http
+              containerPort: 8000
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: account-service
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           envFrom:
+            - configMapRef:
+                name: otel-env
             - secretRef:
                 name: db-secret
           readinessProbe:
@@ -54,9 +82,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: account-service
+  labels:
+    app: account-service
+    # Selected by the prod ServiceMonitor (kube-prometheus-stack)
+    nexora.io/metrics: enabled
 spec:
   selector:
     app: account-service
   ports:
-    - port: 8000
+    - name: http
+      port: 8000
       targetPort: 8000

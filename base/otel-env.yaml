@@ -1,0 +1,18 @@
+# Tracing settings shared by the five Python services.
+# The images start through "opentelemetry-instrument"; tracing is off in the
+# image by default (OTEL_SDK_DISABLED=true) and switched on here.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-env
+data:
+  OTEL_SDK_DISABLED: "false"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.monitoring.svc.cluster.local:4317"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+  OTEL_TRACES_EXPORTER: "otlp"
+  OTEL_METRICS_EXPORTER: "none"
+  OTEL_LOGS_EXPORTER: "none"
+  OTEL_PROPAGATORS: "tracecontext,baggage"
+  # Sampling is decided in the collector (tail sampling), so the SDK keeps everything
+  OTEL_TRACES_SAMPLER: "parentbased_always_on"
+  OTEL_PYTHON_EXCLUDED_URLS: "health/.*,metrics"
