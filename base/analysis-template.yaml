@@ -8,20 +8,24 @@ spec:
     - name: service-name
   metrics:
     - name: error-rate
-      interval: 10s
+      # 6 measurements, 30s apart: the AnalysisRun ends after about 3 minutes
+      # instead of running until the rollout finishes.
+      interval: 30s
+      count: 6
       # Fallback: safely passes if the array is ever unexpectedly empty
       successCondition: len(result) == 0 || result[0] <= 0.05 
       failureLimit: 1
       provider:
         prometheus:
           address: http://prometheus-server.monitoring.svc.cluster.local:80
+          # [2m] spans at least four 30s scrapes, so rate() always has samples.
           query: |
             (
-              sum(rate(http_requests_total{app="{{args.service-name}}", status=~"5.*"}[1m])) 
+              sum(rate(http_requests_total{app="{{args.service-name}}", status=~"5.*"}[2m])) 
               or on() vector(0)
             )
             /
             (
-              sum(rate(http_requests_total{app="{{args.service-name}}"}[1m])) > 0 
+              sum(rate(http_requests_total{app="{{args.service-name}}"}[2m])) > 0 
               or on() vector(1)
             )

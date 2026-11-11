@@ -20,11 +20,15 @@ spec:
           - name: service-name
             value: api-gateway
         startingStep: 1 # Start analyzing after 10% traffic shifts!
+      # No trafficRouting is configured, so weights are approximated by pod count.
+      # With 2 replicas, setWeight 10 runs 1 canary pod next to 2 stable pods,
+      # which is about 33% of traffic, not 10%.
+      # Pauses are 2m so the analysis sees fresh 30s scrapes of the canary.
       steps:
         - setWeight: 10
-        - pause: {duration: 30s}
+        - pause: {duration: 2m}
         - setWeight: 50
-        - pause: {duration: 30s}
+        - pause: {duration: 2m}
   template:
     metadata:
       labels:
