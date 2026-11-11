@@ -7,7 +7,6 @@ resources:
 - ../../base
 - external-secret.yaml
 - gateway.yaml
-- db-init-job.yaml
 - kafka-access.yaml
 
 patches:

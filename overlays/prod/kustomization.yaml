@@ -8,8 +8,7 @@ resources:
   - ../../base
   - external-secret.yaml
   - gateway.yaml
-  - db-init-job.yaml
-
+  
 # PRODUCTION HIGH AVAILABILITY PATCHES (Enforces 2 replicas across AZs)
 patches:
   - target:

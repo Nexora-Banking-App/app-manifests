@@ -79,22 +79,21 @@ app-manifests/
 │   ├── fraud-service.yaml              <-- Fraud rule engine & HorizontalPodAutoscaler (HPA)
 │   ├── analysis-template.yaml          <-- Canary error-rate analysis (Prometheus)
 │   ├── otel-env.yaml                   <-- Shared tracing settings (ConfigMap)
-│   └── pod-disruption-budgets.yaml     <-- One PDB per service
+│   ├── pod-disruption-budgets.yaml     <-- One PDB per service
+│   └── db-init-job.yaml                <-- Idempotent MySQL schema + treasury seed (ArgoCD sync hook)
 │
 └── overlays/
     ├── staging/                        <-- Staging Environment Target (nexora-staging cluster)
     │   ├── kustomization.yaml          <-- Injects Amazon ECR image digests & patches
     │   ├── external-secret.yaml        <-- Binds to nexora/staging/db-credentials via ESO
     │   ├── gateway.yaml                <-- Kubernetes Gateway API (Gateway & HTTPRoute)
-    │   ├── db-init-job.yaml            <-- Automated MySQL DDL & staging Treasury seeding
     │   ├── kafka-access.yaml           <-- Cross-namespace Kafka ExternalSecrets
     │   └── patch-kafka-*.yaml          <-- TLS/SCRAM Kafka configuration for services
     │
     └── prod/                           <-- Production Environment Target (nexora-prod cluster)
         ├── kustomization.yaml          <-- Enforces replicas: 2 across AZs & production quotas
         ├── external-secret.yaml        <-- Binds to nexora/prod/db-credentials (Multi-AZ RDS)
-        ├── gateway.yaml                <-- Production Kubernetes Gateway API load balancer
-        └── db-init-job.yaml            <-- Production MySQL DDL & $10M Treasury Seeding
+        └── gateway.yaml                <-- Production Kubernetes Gateway API load balancer
 ```
 
 ---

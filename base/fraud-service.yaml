@@ -5,7 +5,7 @@ metadata:
   labels:
     app: fraud-service
 spec:
-  # (Removed replicas: 1 so HPA owns the scale!)
+  # No replicas field: the HorizontalPodAutoscaler below owns the replica count.
   selector:
     matchLabels:
       app: fraud-service

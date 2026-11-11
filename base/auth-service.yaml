@@ -53,7 +53,7 @@ spec:
           envFrom:
             - configMapRef:
                 name: otel-env
-            # Injected live from AWS Secrets Manager via ESO!
+            # DB credentials and app secrets, synced from AWS Secrets Manager by ESO
             - secretRef:
                 name: db-secret
           env:

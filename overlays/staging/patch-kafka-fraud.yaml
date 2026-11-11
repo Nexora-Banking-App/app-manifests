@@ -30,10 +30,6 @@ spec:
             - name: kafka-ca
               mountPath: /etc/kafka/ca
               readOnly: true
-          # Kafka client libraries need more headroom than the 128Mi base limit
-          resources:
-            limits:
-              memory: 256Mi
       volumes:
         - name: kafka-ca
           secret:

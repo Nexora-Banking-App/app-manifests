@@ -4,7 +4,7 @@ metadata:
   name: nexora-gateway
   namespace: nexora
   annotations:
-    # CRITICAL FIX: Tells AWS to assign public IPs and deploy to public subnets!
+    # Internet-facing load balancer in the public subnets
     service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 spec:
   gatewayClassName: istio

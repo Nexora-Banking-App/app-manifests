@@ -1,3 +1,8 @@
+# Creates the schema and seeds the treasury account. Every statement is
+# idempotent (CREATE TABLE IF NOT EXISTS / ON DUPLICATE KEY), so it is safe to
+# run on every ArgoCD sync. Credentials come from the db-secret ExternalSecret
+# of the overlay, so the same Job serves staging and prod.
+# Keep the tables in step with nexora-apps/db-init/init.sql (local development).
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -9,6 +14,9 @@ metadata:
 spec:
   template:
     metadata:
+      labels:
+        # Selected by the db-init NetworkPolicy in platform-config (egress to MySQL)
+        app: db-init
       annotations:
         sidecar.istio.io/inject: "false"
     spec:

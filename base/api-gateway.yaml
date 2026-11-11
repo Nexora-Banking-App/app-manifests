@@ -1,4 +1,4 @@
-# Changed from apps/v1 Deployment to argoproj.io/v1alpha1 Rollout!
+# api-gateway is an Argo Rollout (not a Deployment) so new versions go out as a canary.
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
@@ -10,7 +10,6 @@ spec:
   selector:
     matchLabels:
       app: api-gateway
-  # THE CANARY STRATEGY:
   strategy:
     canary:
       analysis:
@@ -19,7 +18,7 @@ spec:
         args:
           - name: service-name
             value: api-gateway
-        startingStep: 1 # Start analyzing after 10% traffic shifts!
+        startingStep: 1 # Start analysing once the first canary step is in place
       # No trafficRouting is configured, so weights are approximated by pod count.
       # With 2 replicas, setWeight 10 runs 1 canary pod next to 2 stable pods,
       # which is about 33% of traffic, not 10%.
@@ -55,12 +54,11 @@ spec:
         # Writable scratch space; the root filesystem is read-only
         - name: tmp
           emptyDir: {}
-      # ... (KEEP THE REST OF YOUR CONTAINERS SPEC EXACTLY THE SAME!) ...
       containers:
         - name: api-gateway
           image: ghcr.io/nexora-platform/api-gateway:v1.0.0
-          # CRITICAL FIX: Force Kubernetes to pull the new build from ECR!
-          imagePullPolicy: Always
+          # Image tags are immutable Git SHAs, so a cached image is always the right one.
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8000
