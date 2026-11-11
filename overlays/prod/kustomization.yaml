@@ -41,23 +41,35 @@ patches:
         path: /spec/replicas
         value: 2
 
-# Connects to your Amazon ECR Registry
+# Amazon ECR images, pinned to an immutable tag.
+# Prod is promoted by pull request: copy the tag that has been verified in
+# overlays/staging/kustomization.yaml into every newTag below. Never use "latest".
+  # Prod metrics live in kube-prometheus-stack, so the canary analysis queries
+  # that Prometheus instead of the staging prometheus-server Service.
+  - target:
+      kind: AnalysisTemplate
+      name: http-error-rate
+    patch: |-
+      - op: replace
+        path: /spec/metrics/0/provider/prometheus/address
+        value: http://kps-prometheus.monitoring.svc.cluster.local:9090
+
 images:
   - name: ghcr.io/nexora-platform/frontend-web
     newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/frontend-web
-    newTag: latest
+    newTag: 8e48351
   - name: ghcr.io/nexora-platform/api-gateway
     newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/api-gateway
-    newTag: latest
+    newTag: 8e48351
   - name: ghcr.io/nexora-platform/auth-service
     newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/auth-service
-    newTag: latest
+    newTag: 8e48351
   - name: ghcr.io/nexora-platform/account-service
     newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/account-service
-    newTag: latest
+    newTag: 8e48351
   - name: ghcr.io/nexora-platform/transaction-service
     newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/transaction-service
-    newTag: latest
+    newTag: 8e48351
   - name: ghcr.io/nexora-platform/fraud-service
     newName: 800770414458.dkr.ecr.us-east-1.amazonaws.com/nexora/fraud-service
-    newTag: latest
+    newTag: 8e48351
