@@ -1,7 +1,3 @@
-
-
-***
-
 <div align="center">
 
 # Nexora Core Banking: Application Manifests (`app-manifests`)
